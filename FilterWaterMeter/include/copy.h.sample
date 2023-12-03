@@ -1,0 +1,14 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#define WIFI_SSID "enter_your_WIFI_SSID"
+#define WIFI_PASS "enter_your_WIFI_password"
+
+#define MQTT_SERVER_IP "enter_your_MQTT_SERVER"
+#define MQTT_SERVER_PORT 1883
+#define MQTT_PUB_FLOW "watermeterfilter/flow"
+#define MQTT_PUB_VOLUME "watermeterfilter/volume"
+#define MQTT_PUB_REQUEST "watermeterfilter/request"
+#define MQTT_SUB_RESPONSE "watermeterfilter/response"
+
+#endif
