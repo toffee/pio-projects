@@ -147,7 +147,7 @@ void loop() {
     // that to scale the output. We also apply the calibrationFactor to scale the output
     // based on the number of pulses per second per units of measure (litres/minute in
     // this case) coming from the sensor.
-    float volume = float(pulseCount) / 5880; // [l]
+    float volume = float(pulseCount) / 2142; // [l]
     Serial.printf("Volume: %.3f l\t", volume);
     totalVolume += volume;
     flowRate = volume / timePassed; // [l/ms]
