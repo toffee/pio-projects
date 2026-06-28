@@ -89,11 +89,15 @@
 
 AsyncWebServer server(80);
 
+void before()
+{
+  WebSerial.begin(&server);
+  server.begin();
+}
+
 void setup()
 {
-	// Setup locally attached sensors
-	WebSerial.begin(&server);
-  	server.begin();
+	// Setup locally attached sensors here if needed
 }
 
 void presentation()
@@ -103,8 +107,10 @@ void presentation()
 
 void loop()
 {
-	// Send locally attached sensors data here
-	WebSerial.println("Hello!");
-  	delay(2000);
+	// Use a non-blocking timer:
+	static unsigned long lastTime = 0;
+	if (millis() - lastTime > 2000) {
+		lastTime = millis();
+		WebSerial.println("Hello!");
+	}
 }
-
