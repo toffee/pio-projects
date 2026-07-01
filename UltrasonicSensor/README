@@ -1,0 +1,113 @@
+The device that I have it's a Arduino Mini Pro (probably a clone) running at 3.3V, so 8MHz.
+
+How to write a bootloader (if somehow get destroyed):
+ 0. Write the platform.ini
+ ```
+[env:pro8MHzatmega328]
+platform = atmelavr
+board = pro8MHzatmega328
+framework = arduino
+
+# --- FORCE SERIAL TRANSLATION FOR THE ARDUINO UNO ISP ---
+# stk500v1 is the exact serial instruction engine utilized by the ArduinoISP sketch
+upload_protocol = stk500v1
+
+# Dynamically forwards your active COM port and pins to avrdude
+upload_flags =
+    -P$UPLOAD_PORT
+    -b$UPLOAD_SPEED
+
+# Targets your programmer's active identification node
+upload_port = COM5
+upload_speed = 19200
+
+# Match the serial monitor speed to Serial.begin(9600)
+monitor_speed = 9600
+
+[env:uno_programmer]
+platform = atmelavr
+board = uno
+framework = arduino
+ ```
+ 1. Load ArduinoUno with ArduinoISP.ino (if it's done with PlatformIO the ino code should be pasted into main.cpp and modified - the function declaration at the begining of the file);
+ 2. Wire Arduino UNO ICSP header to Arduino Mini Pro as following (wiring throul Arduino 10, 11, 12, 13 pin does not work!):
+
+From Arduino Uno 	Connect to Pro Mini	Notes
+Pin Location        Target Pin
+ICSP Pin 1 (MISO)	Pin 12 (MISO)	Data Input line
+ICSP Pin 3 (SCK)	Pin 13 (SCK)	Clock Line
+ICSP Pin 4 (MOSI)	Pin 11 (MOSI)	Data Output line
+ICSP Pin 6 (GND)	GND	            Shared Electrical Ground
+Main Board 3.3V Pin RAW Pin	        Safely passes through the 4B2X regulator
+(Not ICSP!)
+Main Board Pin 10 	RST (Reset)	    CRUCIAL: The Uno must control the reset line via digital Pin 10. Do not use ICSP Pin 5.
+(Not ICSP!)
+
+The ICSP header is the 2x3 block of pins near the edge of the Arduino Uno board. 
+If you look at the board with the 2x3 header on the right, the pins are arranged like this:
+
+  (MISO)  Pin 1  ⚫  ⚫  Pin 2  (VCC - 5V! ⚠️)
+  (SCK)   Pin 3  ⚫  ⚫  Pin 4  (MOSI)
+  (RST)   Pin 5  ⚫  ⚫  Pin 6  (GND)
+
+ 3. From PlatformIO run Burn Bootloader
+ 4. From PlatformIO run Upload
+ 
+ Additiona info:
+  * Command to read the fusses: 
+ ```
+ %USERPROFILE%\.platformio\packages\tool-avrdude\avrdude.exe -C %USERPROFILE%\.platformio\packages\tool-avrdude\avrdude.conf -c stk500v1 -p m328p -P COM5 -b 19200 -U lfuse:r:-:h -U hfuse:r:-:h -U efuse:r:-:h -U lock:r:-:h
+ ```
+
+ Correct fuses are:
+ lfuse - 0xff
+ hfuse - 0xde
+ efuse - 0xfd
+ lock - 0xcf
+
+ * The XTW USB ISP Version 2.0 togheter with ProgISP 1.72 seems not working for writing the bootloader and the firmware. Lot of time spend without success. Fallback to Arduino ISP succesfully.
+
+ Flashing via USB-Serial adapter FTDI (red one):
+ 1. Wire FTDI to Pro Mini.
+ This FTDI seems blocks the update if DTR is connected. Workaround is to push/release the reset button until upload start.
+The VCC, GND, TX, RX should come from the USB adapter (VCC and GND not from the power) and probbably the NRF should be disconnected when uploading firmware (not sure about this).
+
+ GND ➡️ GND
+ VCC ➡️ RAW
+ TX ➡️ RX
+ RX ➡️ TX
+ DTR ➡️ RST
+
+What is Happening Behind the Scenes
+On a standard Arduino Pro Mini, the RST pin requires a very brief, clean pulse to ground (0V) to trigger the bootloader.
+ * Many cheap FTDI clones do not pull the DTR line low cleanly; instead, they pull it low and keep it low.
+ * This holds the Arduino Pro Mini in a continuous, frozen reset state while PlatformIO is trying to talk to it. Because the chip is frozen, it cannot respond, leading to the long timeout error.
+ * When you rapidly tap or release the physical reset button, you are manually forcing the reset line back to 5V/3.3V at the exact millisecond the chip needs to wake up and listen, allowing the upload to catch.
+
+The Permanent Hardware Fix (not tested):
+
+Add a 0.1µF CapacitorIf you want to stop fighting the manual button timing and get one-click automatic uploading working smoothly with your FTDI adapter, you need to add a single component inline on your DTR wire.
+Standard Arduino boards use a 0.1µF (100nF) ceramic capacitor placed directly between the FTDI's DTR pin and the Pro Mini's RST pin.
+
+  [ FTDI DTR Pin ]  ───►  [ 0.1µF Capacitor ]  ───►  [ Pro Mini RST Pin ]
+
+Why this works:
+
+A capacitor blocks continuous direct current (DC). When PlatformIO toggles the DTR line, the capacitor converts that long, frozen "low" signal into a single, razor-sharp negative pulse. This resets the Arduino instantly and lets it wake up immediately to accept the upload without getting stuck.
+
+ 2. Write the platform.ini
+ ```
+ [env:pro8MHzatmega328]
+platform = atmelavr
+board = pro8MHzatmega328
+framework = arduino
+
+# Standard serial upload protocol
+upload_protocol = arduino
+
+# The factory bootloader you just burned listens exactly at 57600 baud
+upload_speed = 57600   
+
+# Match the serial monitor to your test counter script's baud rate
+monitor_speed = 9600 
+ ```

@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 
+// --- Turn on MySensors Serial Debugging ---
+#define MY_DEBUG
+
 // --- MySensors Configuration ---
 #define MY_NODE_ID 100
 #define MY_RADIO_RF24 
@@ -9,8 +12,8 @@
 #include <MySensors.h>
 
 // --- Pin Assignments ---
-const int TRIGGER_PIN = 5; // Connected to Arduino Pin D5 (PD5)
-const int ECHO_PIN    = 6; // Connected to Arduino Pin D6 (PD6)
+const int TRIGGER_PIN = 6; // Connected to Arduino Pin D6 (PD6)
+const int ECHO_PIN    = 5; // Connected to Arduino Pin D5 (PD5)
 
 // --- Child Sensor IDs ---
 #define CHILD_ID_DIST 181
@@ -90,9 +93,13 @@ void loop() {
   digitalWrite(TRIGGER_PIN, LOW);
 
   long duration = pulseIn(ECHO_PIN, HIGH, 30000); 
+  Serial.print("Duration: ");
+  Serial.println(duration);
   
   if (duration > 0) {
     long distanceCm = duration / 29 / 2;
+    Serial.print("Distance: ");
+    Serial.println(distanceCm);
     
     // Bounds control
     if (distanceCm > 150) distanceCm = 150;
